@@ -1,4 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import Modal from './ui/Modal';
+import Button from './ui/Button';
 
 const ConfirmContext = createContext(null);
 
@@ -31,33 +33,25 @@ export function ConfirmProvider({ children }) {
   return (
     <ConfirmContext.Provider value={confirm}>
       {children}
-      {dialog && (
-        <div
-          className="fixed inset-0 bg-black/40 z-[110] flex items-center justify-center p-4 animate-fade-in"
-          onClick={(e) => { if (e.target === e.currentTarget) handleResolve(false); }}
-        >
-          <div className="bg-white rounded-2xl shadow-warm-lg w-full max-w-sm p-6 animate-fade-in">
-            <h2 className="text-lg font-bold text-stone-800 mb-2">{dialog.title}</h2>
+      <Modal open={!!dialog} onClose={() => handleResolve(false)} title={dialog?.title} maxWidth="max-w-sm">
+        {dialog && (
+          <>
             <p className="text-sm text-stone-600 mb-5">{dialog.message}</p>
             <div className="flex gap-2">
-              <button
+              <Button
+                variant={dialog.danger ? 'danger' : 'primary'}
+                fullWidth
                 onClick={() => handleResolve(true)}
-                className={`flex-1 py-2 text-white font-medium rounded-xl transition-smooth cursor-pointer border-0 text-sm ${
-                  dialog.danger ? 'bg-red-500 hover:bg-red-600' : 'bg-brand-500 hover:bg-brand-400'
-                }`}
               >
                 {dialog.confirmLabel}
-              </button>
-              <button
-                onClick={() => handleResolve(false)}
-                className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium rounded-xl transition-smooth cursor-pointer border-0 text-sm"
-              >
+              </Button>
+              <Button variant="secondary" onClick={() => handleResolve(false)}>
                 {dialog.cancelLabel}
-              </button>
+              </Button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </ConfirmContext.Provider>
   );
 }

@@ -1,32 +1,92 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, query, where } from 'firebase/firestore';
+import { Link } from 'react-router-dom';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { PAYMENT_STATUSES, getMenuItemLabel } from '../lib/menuData';
-import { formatVND } from '../lib/pricing';
+import {
+  PAYMENT_STATUSES, PROTEIN_LABELS, getMenuItemLabel,
+  PLAN_DURATION_PRESETS, DELIVERY_FREQUENCY_PRESETS,
+  formatIntervalLabel, formatDurationLabel, computeDeliveryCount,
+} from '../lib/menuData';
+import { calculateOrderTotal, formatVND } from '../lib/pricing';
 import { useToast } from '../components/Toast';
-import { Package } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmDialog';
+import { Package, Pencil, Trash2 } from 'lucide-react';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Modal from '../components/ui/Modal';
+import Badge from '../components/ui/Badge';
+import { SkeletonList } from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+
+const SUBSCRIPTION_STATUSES = ['Active', 'Paused', 'Completed', 'Cancelled'];
+const paymentTone = (status) => status === 'Đã thanh toán' ? 'green' : status === 'Đã cọc' ? 'amber' : 'red';
 
 export default function SubscriptionsPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [subscriptions, setSubscriptions] = useState([]);
   const [deliveryCounts, setDeliveryCounts] = useState({}); // subId -> remaining count
   const [customers, setCustomers] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+
+  // Lightweight edit modal (package name / price / payment / status only —
+  // editing the delivery schedule itself is out of scope here)
+  const [editingSub, setEditingSub] = useState(null);
+  const [editForm, setEditForm] = useState({ packageName: '', totalPrice: '', paymentStatus: '', status: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Form state
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [packageName, setPackageName] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
-  const [deliveriesPlanned, setDeliveriesPlanned] = useState(4);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [frequency, setFrequency] = useState('weekly');
   const [paymentStatus, setPaymentStatus] = useState('Chưa thanh toán');
   const [lineItemsPerDelivery, setLineItemsPerDelivery] = useState([]);
   const [selectedMenuItemId, setSelectedMenuItemId] = useState('');
   const [addQty, setAddQty] = useState(1);
+  const [priceOverridden, setPriceOverridden] = useState(false);
+
+  // Plan duration (how long the package runs) + delivery frequency (how
+  // often within that span a delivery happens). The delivery count is
+  // derived from these two, not typed in directly.
+  const [planDurationDays, setPlanDurationDays] = useState(30);
+  const [planDurationCustom, setPlanDurationCustom] = useState(false);
+  const [deliveryIntervalDays, setDeliveryIntervalDays] = useState(7);
+  const [deliveryIntervalCustom, setDeliveryIntervalCustom] = useState(false);
+
+  const deliveriesPlanned = computeDeliveryCount(planDurationDays, deliveryIntervalDays);
+  const scheduleEndDate = (() => {
+    if (deliveriesPlanned <= 0) return null;
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + (deliveriesPlanned - 1) * deliveryIntervalDays);
+    return d.toISOString().split('T')[0];
+  })();
+
+  // Price estimate: run the same discount policy used for one-off orders
+  // (per-protein ≥1kg → 10% off, order subtotal ≥1.5tr → 5% off, ≥3tr → 10%
+  // off) across the WHOLE package — i.e. every line item's qty is
+  // multiplied by the number of deliveries planned, so a monthly package
+  // delivered daily is priced as one big bulk order, not priced delivery by
+  // delivery (which would rarely hit the weight/spend thresholds).
+  const pricingResult = lineItemsPerDelivery.length > 0 && deliveriesPlanned > 0
+    ? calculateOrderTotal(lineItemsPerDelivery.map(l => ({ ...l, qty: l.qty * deliveriesPlanned })))
+    : null;
+  const suggestedPrice = pricingResult ? Math.round(pricingResult.finalTotal) : 0;
+
+  // Keep the price field in sync with the suggestion as items/schedule
+  // change, unless the user has typed their own number into the field.
+  useEffect(() => {
+    if (!priceOverridden && pricingResult) {
+      setTotalPrice(String(suggestedPrice));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestedPrice, priceOverridden]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -86,11 +146,28 @@ export default function SubscriptionsPage() {
     setAddQty(1);
   };
 
+  const resetCreateForm = () => {
+    setShowCreate(false);
+    setPackageName('');
+    setTotalPrice('');
+    setLineItemsPerDelivery([]);
+    setSelectedCustomerId('');
+    setCustomerSearch('');
+    setStartDate(new Date().toISOString().split('T')[0]);
+    setPlanDurationDays(30);
+    setPlanDurationCustom(false);
+    setDeliveryIntervalDays(7);
+    setDeliveryIntervalCustom(false);
+    setPriceOverridden(false);
+  };
+
   const handleCreate = async () => {
     if (!selectedCustomerId) { toast.error('Vui lòng chọn khách hàng'); return; }
     if (!packageName.trim()) { toast.error('Vui lòng nhập tên gói'); return; }
     if (lineItemsPerDelivery.length === 0) { toast.error('Vui lòng thêm ít nhất 1 món cho mỗi lần giao'); return; }
+    if (deliveriesPlanned <= 0) { toast.error('Thời hạn gói và tần suất giao không hợp lệ'); return; }
 
+    setCreating(true);
     const customer = customers.find(c => c.id === selectedCustomerId);
 
     // Create subscription doc
@@ -102,9 +179,10 @@ export default function SubscriptionsPage() {
         menuItemId: l.menuItemId, protein: l.protein, flavor: l.flavor,
         sizeGrams: l.sizeGrams, unitPrice: l.unitPrice, qty: l.qty,
       })),
-      deliveriesPlanned: parseInt(deliveriesPlanned),
+      planDurationDays,
+      deliveryIntervalDays,
+      deliveriesPlanned,
       startDate,
-      frequency,
       totalPrice: parseInt(totalPrice) || 0,
       paymentStatus,
       status: 'Active',
@@ -114,13 +192,13 @@ export default function SubscriptionsPage() {
     try {
       const subRef = await addDoc(collection(db, 'subscriptions'), subDoc);
 
-      // Generate delivery schedule
-      const intervalDays = frequency === 'weekly' ? 7 : frequency === 'biweekly' ? 14 : frequency === 'monthly' ? 30 : 7;
+      // Generate delivery schedule: one delivery every `deliveryIntervalDays`,
+      // for `deliveriesPlanned` occurrences starting at `startDate`.
       const start = new Date(startDate);
 
-      for (let i = 0; i < parseInt(deliveriesPlanned); i++) {
+      for (let i = 0; i < deliveriesPlanned; i++) {
         const deliveryDate = new Date(start);
-        deliveryDate.setDate(deliveryDate.getDate() + (i * intervalDays));
+        deliveryDate.setDate(deliveryDate.getDate() + (i * deliveryIntervalDays));
 
         await addDoc(collection(db, 'deliveries'), {
           subscriptionId: subRef.id,
@@ -137,20 +215,90 @@ export default function SubscriptionsPage() {
         });
       }
 
-      setShowCreate(false);
-      setPackageName('');
-      setTotalPrice('');
-      setLineItemsPerDelivery([]);
-      setSelectedCustomerId('');
-      setCustomerSearch('');
+      resetCreateForm();
       await fetchAll();
-      toast.success('Đã tạo gói đăng ký và lịch giao hàng');
+      toast.success(`Đã tạo gói đăng ký và ${deliveriesPlanned} lần giao hàng`);
     } catch (err) {
       toast.error('Lỗi: ' + err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const openEditSub = (sub) => {
+    setEditingSub(sub);
+    setEditForm({
+      packageName: sub.packageName || '',
+      totalPrice: String(sub.totalPrice || ''),
+      paymentStatus: sub.paymentStatus || 'Chưa thanh toán',
+      status: sub.status || 'Active',
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editForm.packageName.trim()) { toast.error('Vui lòng nhập tên gói'); return; }
+
+    setSavingEdit(true);
+    try {
+      const updates = {
+        packageName: editForm.packageName.trim(),
+        totalPrice: parseInt(editForm.totalPrice) || 0,
+        paymentStatus: editForm.paymentStatus,
+        status: editForm.status,
+      };
+      await updateDoc(doc(db, 'subscriptions', editingSub.id), updates);
+      setSubscriptions(prev => prev.map(s => s.id === editingSub.id ? { ...s, ...updates } : s));
+      toast.success('Đã cập nhật gói đăng ký');
+      setEditingSub(null);
+    } catch (err) {
+      toast.error('Lỗi: ' + err.message);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteSub = async (sub) => {
+    const remaining = deliveryCounts[sub.id] ?? 0;
+    const ok = await confirm({
+      title: 'Xóa gói đăng ký',
+      message: remaining > 0
+        ? `"${sub.packageName}" còn ${remaining} lần giao chưa thực hiện. Xóa gói sẽ xóa luôn các lần giao đó. Vẫn xóa?`
+        : `Bạn có chắc muốn xóa "${sub.packageName}"? Hành động này không thể hoàn tác.`,
+      confirmLabel: 'Xóa',
+      danger: true,
+    });
+    if (!ok) return;
+
+    setDeletingId(sub.id);
+    try {
+      const delivSnap = await getDocs(query(collection(db, 'deliveries'), where('subscriptionId', '==', sub.id)));
+      await Promise.all(delivSnap.docs.map(d => deleteDoc(doc(db, 'deliveries', d.id))));
+      await deleteDoc(doc(db, 'subscriptions', sub.id));
+      setSubscriptions(prev => prev.filter(s => s.id !== sub.id));
+      toast.success('Đã xóa gói đăng ký và lịch giao liên quan');
+    } catch (err) {
+      toast.error('Lỗi: ' + err.message);
+    } finally {
+      setDeletingId(null);
     }
   };
 
   const getCustomerName = (id) => customers.find(c => c.id === id)?.name || 'N/A';
+
+  // Subscriptions created before the plan-duration/delivery-frequency model
+  // only have a single `frequency` string ('weekly' | 'biweekly' | 'monthly').
+  // Fall back to that for display so old records still read sensibly.
+  const scheduleLabel = (sub) => {
+    if (sub.deliveryIntervalDays) {
+      const durationPart = sub.planDurationDays ? `${formatDurationLabel(sub.planDurationDays)} · ` : '';
+      return `${durationPart}Giao ${formatIntervalLabel(sub.deliveryIntervalDays).toLowerCase()}`;
+    }
+    if (sub.frequency === 'weekly') return 'Hàng tuần';
+    if (sub.frequency === 'biweekly') return '2 tuần/lần';
+    if (sub.frequency === 'monthly') return 'Hàng tháng';
+    return null;
+  };
 
   const filteredCustomers = customers.filter(c =>
     (c.name || '').toLowerCase().includes(customerSearch.toLowerCase()) ||
@@ -167,20 +315,11 @@ export default function SubscriptionsPage() {
           </h1>
           <p className="text-sm text-stone-500 mt-1">{subscriptions.length} gói</p>
         </div>
-        <button onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition-smooth cursor-pointer border-0">
-          + Tạo gói mới
-        </button>
+        <Button onClick={() => setShowCreate(true)}>+ Tạo gói mới</Button>
       </div>
 
       {/* Create modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto animate-fade-in" onClick={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}>
-          <div className="bg-white rounded-3xl shadow-warm-lg w-full max-w-lg p-6 animate-fade-in mb-8">
-            <h2 className="text-lg font-bold text-stone-800 mb-4 font-display flex items-center gap-2">
-              <Package className="w-5 h-5 text-brand-600" /> Tạo gói đăng ký
-            </h2>
-
+      <Modal open={showCreate} onClose={resetCreateForm} title="Tạo gói đăng ký" maxWidth="max-w-lg" align="top">
             {/* Customer */}
             <div className="mb-3">
               <label className="block text-sm font-medium text-stone-700 mb-1">Khách hàng *</label>
@@ -203,41 +342,64 @@ export default function SubscriptionsPage() {
                 className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-2 gap-3 mb-1">
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Tổng giá gói (VND)</label>
-                <input type="number" value={totalPrice} onChange={(e) => setTotalPrice(e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                <label className="block text-sm font-medium text-stone-700 mb-1">Thời hạn gói</label>
+                <select
+                  value={planDurationCustom ? 'custom' : String(planDurationDays)}
+                  onChange={(e) => {
+                    if (e.target.value === 'custom') { setPlanDurationCustom(true); return; }
+                    setPlanDurationCustom(false);
+                    setPlanDurationDays(Number(e.target.value));
+                  }}
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                >
+                  {PLAN_DURATION_PRESETS.map(p => <option key={p.days} value={p.days}>{p.label}</option>)}
+                  <option value="custom">Tùy chỉnh (nhập số ngày)</option>
+                </select>
+                {planDurationCustom && (
+                  <input type="number" min="1" value={planDurationDays}
+                    onChange={(e) => setPlanDurationDays(parseInt(e.target.value) || 1)}
+                    placeholder="Số ngày"
+                    className="w-full mt-1.5 px-3 py-2 border border-brand-300 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Thanh toán</label>
-                <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
-                  {PAYMENT_STATUSES.map(s => <option key={s}>{s}</option>)}
+                <label className="block text-sm font-medium text-stone-700 mb-1">Tần suất giao hàng</label>
+                <select
+                  value={deliveryIntervalCustom ? 'custom' : String(deliveryIntervalDays)}
+                  onChange={(e) => {
+                    if (e.target.value === 'custom') { setDeliveryIntervalCustom(true); return; }
+                    setDeliveryIntervalCustom(false);
+                    setDeliveryIntervalDays(Number(e.target.value));
+                  }}
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                >
+                  {DELIVERY_FREQUENCY_PRESETS.map(p => <option key={p.days} value={p.days}>{p.label}</option>)}
+                  <option value="custom">Tùy chỉnh (nhập số ngày)</option>
                 </select>
+                {deliveryIntervalCustom && (
+                  <input type="number" min="1" value={deliveryIntervalDays}
+                    onChange={(e) => setDeliveryIntervalDays(parseInt(e.target.value) || 1)}
+                    placeholder="Số ngày"
+                    className="w-full mt-1.5 px-3 py-2 border border-brand-300 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-3">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Số lần giao</label>
-                <input type="number" min="1" value={deliveriesPlanned} onChange={(e) => setDeliveriesPlanned(e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Tần suất</label>
-                <select value={frequency} onChange={(e) => setFrequency(e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
-                  <option value="weekly">Hàng tuần</option>
-                  <option value="biweekly">2 tuần/lần</option>
-                  <option value="monthly">Hàng tháng</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">Ngày bắt đầu</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
-              </div>
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-stone-700 mb-1">Ngày bắt đầu</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+            </div>
+
+            {/* Live-computed schedule preview */}
+            <div className="bg-brand-50 border border-brand-200 rounded-xl px-3 py-2 mb-3 text-sm text-brand-800">
+              {deliveriesPlanned > 0 ? (
+                <>→ Sẽ tạo <strong>{deliveriesPlanned}</strong> lần giao, cách nhau {formatIntervalLabel(deliveryIntervalDays).toLowerCase()}, từ {startDate} đến {scheduleEndDate}</>
+              ) : (
+                <>Thời hạn gói và tần suất giao chưa hợp lệ.</>
+              )}
             </div>
 
             {/* Line items per delivery */}
@@ -265,32 +427,63 @@ export default function SubscriptionsPage() {
               )}
             </div>
 
-            <div className="flex gap-2">
-              <button onClick={handleCreate}
-                className="flex-1 py-2.5 bg-brand-500 hover:bg-brand-400 text-white font-medium rounded-xl cursor-pointer border-0 text-sm">
-                ✓ Tạo gói + lịch giao
-              </button>
-              <button onClick={() => setShowCreate(false)}
-                className="px-4 py-2.5 bg-stone-100 text-stone-600 rounded-xl cursor-pointer border-0 text-sm">Hủy</button>
+            {/* Price estimate — same discount policy as one-off orders, applied
+                across the whole package (qty × số lần giao) */}
+            {pricingResult && (
+              <div className="bg-brand-50 border border-brand-200 rounded-xl p-3 mb-3 text-sm space-y-1">
+                <div className="flex justify-between text-stone-600">
+                  <span>Tạm tính ({deliveriesPlanned} lần giao):</span>
+                  <span>{formatVND(pricingResult.lineSubtotal)}</span>
+                </div>
+                {Object.entries(pricingResult.proteinDiscounts).filter(([, v]) => v).map(([protein]) => (
+                  <div key={protein} className="text-green-600 text-xs">✓ {PROTEIN_LABELS[protein] || protein} ≥1kg (cả gói) → giảm 10%</div>
+                ))}
+                {pricingResult.orderDiscountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Giảm giá theo tổng đơn ({pricingResult.orderDiscountTier}):</span>
+                    <span>-{formatVND(pricingResult.orderDiscountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-lg border-t border-brand-200 pt-1">
+                  <span>Giá gợi ý:</span>
+                  <span className="text-brand-700">{formatVND(suggestedPrice)}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Giá gói (VND)</label>
+                <input type="number" value={totalPrice}
+                  onChange={(e) => { setTotalPrice(e.target.value); setPriceOverridden(true); }}
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                {priceOverridden && pricingResult && Number(totalPrice) !== suggestedPrice && (
+                  <button type="button" onClick={() => setPriceOverridden(false)}
+                    className="text-xs text-brand-600 hover:text-brand-800 cursor-pointer bg-transparent border-0 p-0 mt-1 underline">
+                    Dùng giá gợi ý ({formatVND(suggestedPrice)})
+                  </button>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Thanh toán</label>
+                <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
+                  {PAYMENT_STATUSES.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+
+            <div className="flex gap-2">
+              <Button onClick={handleCreate} loading={creating} fullWidth size="lg">✓ Tạo gói + lịch giao</Button>
+              <Button variant="secondary" onClick={resetCreateForm}>Hủy</Button>
+            </div>
+      </Modal>
 
       {/* Subscription list */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
-        </div>
+        <SkeletonList rows={4} />
       ) : subscriptions.length === 0 ? (
-        <div className="relative overflow-hidden text-center py-16 bg-white rounded-3xl border border-stone-100 shadow-warm">
-          <svg className="absolute w-[300px] h-[300px] opacity-5 text-accent-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <path fill="currentColor" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,81.3,-46.3C90.8,-33.5,96.8,-18,95.5,-2.9C94.2,12.2,85.6,26.9,76.5,41.2C67.4,55.5,57.8,69.4,44.7,78.5C31.6,87.6,15.8,91.9,0.3,91.4C-15.2,90.9,-30.4,85.6,-43.3,76.3C-56.2,67,-66.8,53.7,-75.6,39.2C-84.4,24.7,-91.4,9,-90.4,-6.2C-89.4,-21.4,-80.4,-36.1,-70.3,-49C-60.2,-61.9,-49,-73,-35.6,-79.8C-22.2,-86.6,-6.6,-89.1,7.8,-87.3C22.2,-85.5,44.4,-79.4,44.7,-76.4Z" transform="translate(100 100)" />
-          </svg>
-          <div className="relative z-10">
-            <p className="text-stone-500 font-display">Chưa có gói đăng ký</p>
-          </div>
-        </div>
+        <EmptyState icon={Package} title="Chưa có gói đăng ký" subtitle='Nhấn "Tạo gói mới" để bắt đầu' />
       ) : (
         <div className="space-y-2">
           {subscriptions.map(sub => {
@@ -301,26 +494,46 @@ export default function SubscriptionsPage() {
                 ${isLow ? 'border-amber-300 bg-amber-50' : 'border-stone-100'}`}>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
-                    <h3 className="font-semibold text-stone-800">{sub.packageName}</h3>
-                    <p className="text-sm text-stone-500">{sub.customerName || getCustomerName(sub.customerId)}</p>
+                    <h3 className="font-semibold">
+                      <Link to={`/subscriptions/${sub.id}`} className="text-stone-800 hover:text-brand-600 no-underline transition-smooth">
+                        {sub.packageName}
+                      </Link>
+                    </h3>
+                    {sub.customerId ? (
+                      <Link to={`/customers/${sub.customerId}`} className="text-sm text-stone-500 hover:text-brand-600 no-underline transition-smooth">
+                        {sub.customerName || getCustomerName(sub.customerId)}
+                      </Link>
+                    ) : (
+                      <p className="text-sm text-stone-500">{sub.customerName || 'N/A'}</p>
+                    )}
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-stone-500">
                       <span>📅 {sub.startDate}</span>
-                      <span>{sub.frequency === 'weekly' ? 'Hàng tuần' : sub.frequency === 'biweekly' ? '2 tuần/lần' : 'Hàng tháng'}</span>
+                      {scheduleLabel(sub) && <span>{scheduleLabel(sub)}</span>}
                       {sub.totalPrice > 0 && <span className="font-medium text-brand-600">{formatVND(sub.totalPrice)}</span>}
                     </div>
                   </div>
-                  <div className="text-right space-y-1">
-                    <div className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
-                      remaining <= 1 ? 'bg-amber-200 text-amber-800' : 'bg-brand-100 text-brand-700'
-                    }`}>
-                      Còn {remaining}/{sub.deliveriesPlanned} lần giao
+                  <div className="text-right space-y-1.5">
+                    <Badge tone={remaining <= 1 ? 'amber' : 'brand'}>Còn {remaining}/{sub.deliveriesPlanned} lần giao</Badge>
+                    <div className="flex items-center justify-end gap-2">
+                      <Badge tone={paymentTone(sub.paymentStatus)}>{sub.paymentStatus}</Badge>
+                      {sub.status !== 'Active' && <Badge tone="stone">{sub.status}</Badge>}
                     </div>
-                    <div>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        sub.paymentStatus === 'Đã thanh toán' ? 'bg-green-100 text-green-700' :
-                        sub.paymentStatus === 'Đã cọc' ? 'bg-amber-100 text-amber-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>{sub.paymentStatus}</span>
+                    <div className="flex items-center justify-end gap-2 pt-0.5">
+                      <button
+                        onClick={() => openEditSub(sub)}
+                        className="text-stone-400 hover:text-brand-600 cursor-pointer bg-transparent border-0 transition-smooth"
+                        aria-label="Sửa gói đăng ký"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSub(sub)}
+                        disabled={deletingId === sub.id}
+                        className="text-stone-300 hover:text-red-500 cursor-pointer bg-transparent border-0 transition-smooth disabled:opacity-50"
+                        aria-label="Xóa gói đăng ký"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -329,6 +542,43 @@ export default function SubscriptionsPage() {
           })}
         </div>
       )}
+
+      {/* Edit modal (basic fields only) */}
+      <Modal open={!!editingSub} onClose={() => setEditingSub(null)} title="Sửa gói đăng ký" maxWidth="max-w-sm">
+        <form onSubmit={handleSaveEdit} className="space-y-3">
+          <Input
+            label="Tên gói"
+            required
+            value={editForm.packageName}
+            onChange={(e) => setEditForm(f => ({ ...f, packageName: e.target.value }))}
+          />
+          <Input
+            label="Tổng giá gói (VND)"
+            type="number"
+            value={editForm.totalPrice}
+            onChange={(e) => setEditForm(f => ({ ...f, totalPrice: e.target.value }))}
+          />
+          <Select
+            label="Thanh toán"
+            value={editForm.paymentStatus}
+            onChange={(e) => setEditForm(f => ({ ...f, paymentStatus: e.target.value }))}
+          >
+            {PAYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </Select>
+          <Select
+            label="Trạng thái gói"
+            value={editForm.status}
+            onChange={(e) => setEditForm(f => ({ ...f, status: e.target.value }))}
+          >
+            {SUBSCRIPTION_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </Select>
+          <p className="text-xs text-stone-400">Lưu ý: sửa ở đây không thay đổi lịch giao hàng đã tạo — vào trang Giao hàng để chỉnh từng lần giao.</p>
+          <div className="flex gap-2 pt-2">
+            <Button type="submit" fullWidth loading={savingEdit}>Cập nhật</Button>
+            <Button type="button" variant="secondary" onClick={() => setEditingSub(null)}>Hủy</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

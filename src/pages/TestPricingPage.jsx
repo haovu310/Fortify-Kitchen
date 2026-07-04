@@ -3,6 +3,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { calculateOrderTotal, formatVND } from '../lib/pricing';
 import { PROTEIN_LABELS, getMenuItemLabel } from '../lib/menuData';
+import { FlaskConical, ChartColumn } from 'lucide-react';
 
 export default function TestPricingPage() {
   const [menuItems, setMenuItems] = useState([]);
@@ -69,12 +70,12 @@ export default function TestPricingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">🧪 Test Pricing</h1>
+        <h1 className="text-2xl font-bold text-stone-800 font-display flex items-center gap-2"><FlaskConical className="w-6 h-6 text-brand-500" /> Test Pricing</h1>
         <p className="text-sm text-stone-500 mt-1">Kiểm tra tính năng tính giá với các tổ hợp đơn hàng</p>
       </div>
 
       {/* Add item form */}
-      <div className="bg-white rounded-2xl border border-stone-100 shadow-warm p-4">
+      <div className="bg-white rounded-3xl border border-stone-100 shadow-warm p-4">
         <h2 className="text-sm font-semibold text-stone-600 mb-3">Thêm món</h2>
         <div className="flex flex-wrap gap-2 items-end">
           <div className="flex-1 min-w-[200px]">
@@ -112,7 +113,7 @@ export default function TestPricingPage() {
 
       {/* Line items table */}
       {lineItems.length > 0 && (
-        <div className="bg-white rounded-2xl border border-stone-100 shadow-warm overflow-hidden animate-fade-in">
+        <div className="bg-white rounded-3xl border border-stone-100 shadow-warm overflow-hidden animate-fade-in">
           <div className="px-4 py-3 bg-stone-50 border-b border-stone-100">
             <h2 className="text-sm font-semibold text-stone-600">Các món đã chọn</h2>
           </div>
@@ -165,10 +166,10 @@ export default function TestPricingPage() {
 
       {/* Pricing breakdown */}
       {result && (
-        <div className="bg-white rounded-2xl border border-stone-100 shadow-warm p-4 space-y-4 animate-fade-in">
+        <div className="bg-white rounded-3xl border border-stone-100 shadow-warm p-4 space-y-4 animate-fade-in">
           {/* Per-protein summary */}
           <div>
-            <h3 className="text-sm font-semibold text-stone-600 mb-2">📊 Tổng gram theo loại protein</h3>
+            <h3 className="text-sm font-semibold text-stone-600 mb-2 flex items-center gap-1.5"><ChartColumn className="w-4 h-4" /> Tổng gram theo loại protein</h3>
             <div className="flex flex-wrap gap-2">
               {Object.entries(result.proteinGrams).map(([protein, grams]) => (
                 <div key={protein} className={`px-3 py-2 rounded-xl text-sm font-medium ${
@@ -211,7 +212,7 @@ export default function TestPricingPage() {
       )}
 
       {/* Regression test hint */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
+      <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4 text-sm text-amber-800">
         <strong>🧪 Test case:</strong> Thêm 8× Gà xá xíu 150g + 4× Bò herb 150g → Kết quả đúng: <strong>380,000 đ</strong>
         <br />
         <span className="text-amber-600">(Gà: 1,200g ≥ 1kg → -10%; Bò: 600g, không giảm; Tổng 380k &lt; 1.5M → không giảm thêm)</span>

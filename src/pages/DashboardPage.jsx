@@ -4,6 +4,8 @@ import { db } from '../lib/firebase';
 import { formatVND } from '../lib/pricing';
 import { PROTEIN_LABELS } from '../lib/menuData';
 import { Package, Truck, ChefHat, Wallet, TrendingUp, AlertTriangle, CalendarRange } from 'lucide-react';
+import { SkeletonKpiGrid, SkeletonList } from '../components/ui/Skeleton';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 export default function DashboardPage() {
   const [deliveries, setDeliveries] = useState([]);
@@ -74,10 +76,26 @@ export default function DashboardPage() {
     .reduce((sum, s) => sum + (s.totalPrice || 0), 0);
   const totalRevenue = orderRevenue + subRevenue;
 
+  // Last 14 days revenue trend (orders' deliveryDate used as the revenue-day proxy)
+  const last14Days = Array.from({ length: 14 }).map((_, i) => {
+    const d = new Date(Date.now() - (13 - i) * 86400000);
+    return d.toISOString().split('T')[0];
+  });
+  const revenueTrend = last14Days.map(date => ({
+    date: date.slice(5).replace('-', '/'), // MM/DD short label
+    fullDate: date,
+    revenue: orders.filter(o => o.deliveryDate === date).reduce((s, o) => s + (o.total || 0), 0),
+  }));
+
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
+      <div className="space-y-6">
+        <div>
+          <div className="h-7 w-40 bg-stone-200/70 rounded-lg animate-pulse mb-2" />
+          <div className="h-4 w-64 bg-stone-200/50 rounded-lg animate-pulse" />
+        </div>
+        <SkeletonKpiGrid />
+        <SkeletonList rows={3} />
       </div>
     );
   }
@@ -92,19 +110,52 @@ export default function DashboardPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Gói hoạt động', value: activeSubs, icon: <Package className="w-6 h-6" />, color: 'bg-brand-50 text-brand-700' },
-          { label: 'Giao hàng tuần này', value: deliveriesThisWeek, icon: <Truck className="w-6 h-6" />, color: 'bg-accent-50 text-accent-700' },
-          { label: 'Phần ăn tuần này', value: portionsThisWeek, icon: <ChefHat className="w-6 h-6" />, color: 'bg-amber-50 text-amber-700' },
-          { label: 'Đơn chưa TT', value: unpaidCount, icon: <Wallet className="w-6 h-6" />, color: 'bg-brand-100 text-brand-800' },
-          { label: 'Doanh thu tháng', value: formatVND(totalRevenue), icon: <TrendingUp className="w-6 h-6" />, color: 'bg-accent-100 text-accent-800' },
+          { label: 'Gói hoạt động', value: activeSubs, icon: <Package className="w-5 h-5" />, badge: 'bg-brand-50 text-brand-600' },
+          { label: 'Giao hàng tuần này', value: deliveriesThisWeek, icon: <Truck className="w-5 h-5" />, badge: 'bg-accent-50 text-accent-600' },
+          { label: 'Phần ăn tuần này', value: portionsThisWeek, icon: <ChefHat className="w-5 h-5" />, badge: 'bg-amber-50 text-amber-600' },
+          { label: 'Đơn chưa TT', value: unpaidCount, icon: <Wallet className="w-5 h-5" />, badge: unpaidCount > 0 ? 'bg-red-50 text-red-600' : 'bg-stone-100 text-stone-500' },
+          { label: 'Doanh thu tháng', value: formatVND(totalRevenue), icon: <TrendingUp className="w-5 h-5" />, badge: 'bg-brand-50 text-brand-600' },
         ].map((kpi, idx) => (
-          <div key={idx} className={`${kpi.color} rounded-3xl p-4 border border-current/10 animate-fade-in`}>
-            <div className="mb-1">{kpi.icon}</div>
-            <div className="text-2xl font-bold font-display">{kpi.value}</div>
-            <div className="text-xs opacity-75 mt-0.5">{kpi.label}</div>
+          <div
+            key={idx}
+            className="bg-white rounded-2xl p-4 border border-stone-100 shadow-warm hover:shadow-warm-lg transition-smooth animate-fade-in"
+          >
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${kpi.badge}`}>
+              {kpi.icon}
+            </div>
+            <div className="text-2xl font-bold font-display text-stone-800 tabular-nums leading-tight">{kpi.value}</div>
+            <div className="text-xs text-stone-500 mt-1">{kpi.label}</div>
           </div>
         ))}
       </div>
+
+      {/* Revenue trend (last 14 days) */}
+      <section className="bg-white rounded-3xl border border-stone-100 shadow-warm p-4">
+        <h2 className="text-sm font-semibold text-stone-700 font-display flex items-center gap-1.5 mb-3">
+          <TrendingUp className="w-4 h-4" /> Doanh thu 14 ngày qua
+        </h2>
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={revenueTrend} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E7EEE7" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#78716c' }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#78716c' }}
+                axisLine={false}
+                tickLine={false}
+                width={48}
+                tickFormatter={(v) => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}tr` : v >= 1000 ? `${Math.round(v / 1000)}k` : v}
+              />
+              <Tooltip
+                formatter={(value) => [formatVND(value), 'Doanh thu']}
+                labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
+                contentStyle={{ borderRadius: 12, border: '1px solid #E7EEE7', fontSize: 13 }}
+              />
+              <Bar dataKey="revenue" fill="#283828" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
 
       {/* Today's deliveries */}
       <section className="bg-white rounded-3xl border border-stone-100 shadow-warm overflow-hidden">

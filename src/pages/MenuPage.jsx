@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { DEFAULT_MENU_ITEMS, PROTEIN_LABELS } from '../lib/menuData';
 import { formatVND } from '../lib/pricing';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmDialog';
-import { UtensilsCrossed } from 'lucide-react';
+import { UtensilsCrossed, Sprout, Search, Trash2 } from 'lucide-react';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import { SkeletonTable } from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 export default function MenuPage() {
   const toast = useToast();
@@ -15,6 +19,8 @@ export default function MenuPage() {
   const [seeding, setSeeding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editPrice, setEditPrice] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
+  const [search, setSearch] = useState('');
 
   const fetchItems = async () => {
     setLoading(true);
@@ -88,8 +94,36 @@ export default function MenuPage() {
     }
   };
 
-  // Group by protein
-  const grouped = items.reduce((acc, item) => {
+  const handleDelete = async (item) => {
+    const label = `${PROTEIN_LABELS[item.protein] || item.protein} ${item.flavor} (${item.sizeGrams}g)`;
+    const ok = await confirm({
+      title: 'Xóa món',
+      message: `Xóa "${label}" khỏi thực đơn? Các đơn hàng/gói đăng ký đã tạo trước đó sẽ không bị ảnh hưởng, nhưng món này sẽ không thể chọn cho đơn mới.`,
+      confirmLabel: 'Xóa',
+      danger: true,
+    });
+    if (!ok) return;
+
+    setDeletingId(item.id);
+    try {
+      await deleteDoc(doc(db, 'menuItems', item.id));
+      setItems(prev => prev.filter(i => i.id !== item.id));
+      toast.success('Đã xóa món');
+    } catch (err) {
+      toast.error('Lỗi: ' + err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Search across all items (by protein label or flavor), then group by protein
+  const filteredItems = items.filter(item => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return item.flavor.toLowerCase().includes(q) ||
+      (PROTEIN_LABELS[item.protein] || item.protein).toLowerCase().includes(q);
+  });
+  const grouped = filteredItems.reduce((acc, item) => {
     if (!acc[item.protein]) acc[item.protein] = [];
     acc[item.protein].push(item);
     return acc;
@@ -105,29 +139,38 @@ export default function MenuPage() {
           </h1>
           <p className="text-sm text-stone-500 mt-1">Quản lý giá và món ăn</p>
         </div>
-        <button
-          onClick={handleSeed}
-          disabled={seeding}
-          className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition-smooth cursor-pointer border-0 disabled:opacity-50"
-        >
-          {seeding ? 'Đang tạo...' : '🌱 Tạo dữ liệu mẫu'}
-        </button>
+        {/* Dev-only convenience: never shown in a production build */}
+        {import.meta.env.DEV && (
+          <Button onClick={handleSeed} loading={seeding} variant="secondary">
+            <Sprout className="w-4 h-4" />
+            {seeding ? 'Đang tạo...' : 'Tạo dữ liệu mẫu (dev)'}
+          </Button>
+        )}
       </div>
 
+      {!loading && items.length > 0 && (
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <input
+            type="text"
+            placeholder="Tìm theo loại protein hoặc hương vị..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 bg-white"
+          />
+        </div>
+      )}
+
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
-        </div>
+        <SkeletonTable rows={5} cols={4} />
       ) : items.length === 0 ? (
-        <div className="relative overflow-hidden text-center py-16 bg-white rounded-3xl border border-stone-100 shadow-warm">
-          <svg className="absolute w-[300px] h-[300px] opacity-5 text-accent-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <path fill="currentColor" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,81.3,-46.3C90.8,-33.5,96.8,-18,95.5,-2.9C94.2,12.2,85.6,26.9,76.5,41.2C67.4,55.5,57.8,69.4,44.7,78.5C31.6,87.6,15.8,91.9,0.3,91.4C-15.2,90.9,-30.4,85.6,-43.3,76.3C-56.2,67,-66.8,53.7,-75.6,39.2C-84.4,24.7,-91.4,9,-90.4,-6.2C-89.4,-21.4,-80.4,-36.1,-70.3,-49C-60.2,-61.9,-49,-73,-35.6,-79.8C-22.2,-86.6,-6.6,-89.1,7.8,-87.3C22.2,-85.5,44.4,-79.4,44.7,-76.4Z" transform="translate(100 100)" />
-          </svg>
-          <div className="relative z-10">
-            <p className="text-stone-500 text-lg mb-2 font-display">Chưa có món nào — hãy tạo dữ liệu mẫu nhé!</p>
-            <p className="text-stone-400 text-sm">Nhấn "Tạo dữ liệu mẫu" để bắt đầu</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={UtensilsCrossed}
+          title="Chưa có món nào"
+          subtitle={import.meta.env.DEV ? 'Nhấn "Tạo dữ liệu mẫu (dev)" để bắt đầu' : 'Liên hệ quản trị viên để thiết lập thực đơn'}
+        />
+      ) : filteredItems.length === 0 ? (
+        <EmptyState icon={UtensilsCrossed} title="Không tìm thấy món nào" />
       ) : (
         Object.entries(grouped).map(([protein, proteinItems]) => (
           <div key={protein} className="bg-white rounded-3xl border border-stone-100 shadow-warm overflow-hidden animate-fade-in">
@@ -140,18 +183,19 @@ export default function MenuPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-stone-100 text-left">
-                    <th className="px-4 py-2.5 font-medium text-stone-500">Hương vị</th>
-                    <th className="px-4 py-2.5 font-medium text-stone-500 text-center">Khối lượng</th>
-                    <th className="px-4 py-2.5 font-medium text-stone-500 text-right">Giá</th>
-                    <th className="px-4 py-2.5 font-medium text-stone-500 text-center">Trạng thái</th>
+                  <tr className="border-b border-stone-100 bg-stone-50 text-left">
+                    <th className="px-4 py-3 font-semibold text-stone-500 text-xs uppercase tracking-wide">Hương vị</th>
+                    <th className="px-4 py-3 font-semibold text-stone-500 text-xs uppercase tracking-wide text-center">Khối lượng</th>
+                    <th className="px-4 py-3 font-semibold text-stone-500 text-xs uppercase tracking-wide text-right">Giá</th>
+                    <th className="px-4 py-3 font-semibold text-stone-500 text-xs uppercase tracking-wide text-center">Trạng thái</th>
+                    <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {proteinItems.map(item => (
-                    <tr key={item.id} className={`border-b border-stone-50 hover:bg-stone-50 transition-smooth ${!item.active ? 'opacity-50' : ''}`}>
-                      <td className="px-4 py-2.5 font-medium text-stone-700 capitalize">{item.flavor}</td>
-                      <td className="px-4 py-2.5 text-center text-stone-600">{item.sizeGrams}g</td>
+                  {proteinItems.map((item, idx) => (
+                    <tr key={item.id} className={`border-b border-stone-50 last:border-0 hover:bg-brand-50/40 transition-smooth ${!item.active ? 'opacity-50' : ''} ${idx % 2 === 1 ? 'bg-stone-50/50' : ''}`}>
+                      <td className="px-4 py-3 font-medium text-stone-700 capitalize">{item.flavor}</td>
+                      <td className="px-4 py-3 text-center text-stone-600 tabular-nums">{item.sizeGrams}g</td>
                       <td className="px-4 py-2.5 text-right">
                         {editingId === item.id ? (
                           <div className="flex items-center justify-end gap-1">
@@ -182,13 +226,20 @@ export default function MenuPage() {
                       <td className="px-4 py-2.5 text-center">
                         <button
                           onClick={() => toggleActive(item)}
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer border-0 transition-smooth
-                            ${item.active
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
-                            }`}
+                          className="cursor-pointer border-0 bg-transparent p-0 hover:opacity-80 transition-smooth"
+                          title="Nhấn để đổi trạng thái"
                         >
-                          {item.active ? 'Đang bán' : 'Tạm ngưng'}
+                          <Badge tone={item.active ? 'green' : 'stone'}>{item.active ? 'Đang bán' : 'Tạm ngưng'}</Badge>
+                        </button>
+                      </td>
+                      <td className="px-4 py-2.5 text-center">
+                        <button
+                          onClick={() => handleDelete(item)}
+                          disabled={deletingId === item.id}
+                          className="text-stone-300 hover:text-red-500 cursor-pointer bg-transparent border-0 transition-smooth disabled:opacity-50"
+                          aria-label={`Xóa món ${item.flavor}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>

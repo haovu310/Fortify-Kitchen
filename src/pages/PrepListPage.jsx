@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { PROTEIN_LABELS, getMenuItemLabel } from '../lib/menuData';
+import { PROTEIN_LABELS } from '../lib/menuData';
 import { ChefHat } from 'lucide-react';
+import { SkeletonTable } from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
 
 export default function PrepListPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -90,19 +92,13 @@ export default function PrepListPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
-        </div>
+        <SkeletonTable rows={4} cols={3} />
       ) : prepItems.length === 0 ? (
-        <div className="relative overflow-hidden text-center py-16 bg-white rounded-3xl border border-stone-100 shadow-warm">
-          <svg className="absolute w-[300px] h-[300px] opacity-5 text-accent-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-            <path fill="currentColor" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,81.3,-46.3C90.8,-33.5,96.8,-18,95.5,-2.9C94.2,12.2,85.6,26.9,76.5,41.2C67.4,55.5,57.8,69.4,44.7,78.5C31.6,87.6,15.8,91.9,0.3,91.4C-15.2,90.9,-30.4,85.6,-43.3,76.3C-56.2,67,-66.8,53.7,-75.6,39.2C-84.4,24.7,-91.4,9,-90.4,-6.2C-89.4,-21.4,-80.4,-36.1,-70.3,-49C-60.2,-61.9,-49,-73,-35.6,-79.8C-22.2,-86.6,-6.6,-89.1,7.8,-87.3C22.2,-85.5,44.4,-79.4,44.7,-76.4Z" transform="translate(100 100)" />
-          </svg>
-          <div className="relative z-10">
-            <p className="text-stone-500 text-lg mb-1 font-display">Không có gì cần chuẩn bị</p>
-            <p className="text-stone-400 text-sm">Ngày {selectedDate} không có đơn hàng hoặc giao hàng nào</p>
-          </div>
-        </div>
+        <EmptyState
+          icon={ChefHat}
+          title="Không có gì cần chuẩn bị"
+          subtitle={`Ngày ${selectedDate} không có đơn hàng hoặc giao hàng nào`}
+        />
       ) : (
         <>
           {/* Summary cards */}
