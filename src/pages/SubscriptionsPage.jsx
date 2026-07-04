@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { PAYMENT_STATUSES, getMenuItemLabel } from '../lib/menuData';
 import { formatVND } from '../lib/pricing';
 import { useToast } from '../components/Toast';
+import { Package } from 'lucide-react';
 
 export default function SubscriptionsPage() {
   const toast = useToast();
@@ -160,11 +161,14 @@ export default function SubscriptionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">📦 Gói đăng ký</h1>
-          <p className="text-sm text-slate-500 mt-1">{subscriptions.length} gói</p>
+          <h1 className="text-2xl font-bold text-stone-800 font-display flex items-center gap-2">
+            <Package className="w-6 h-6 text-brand-600" />
+            Gói đăng ký
+          </h1>
+          <p className="text-sm text-stone-500 mt-1">{subscriptions.length} gói</p>
         </div>
         <button onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl transition-smooth cursor-pointer border-0">
+          className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition-smooth cursor-pointer border-0">
           + Tạo gói mới
         </button>
       </div>
@@ -172,17 +176,19 @@ export default function SubscriptionsPage() {
       {/* Create modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto animate-fade-in" onClick={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-fade-in mb-8">
-            <h2 className="text-lg font-bold text-slate-800 mb-4">📦 Tạo gói đăng ký</h2>
+          <div className="bg-white rounded-3xl shadow-warm-lg w-full max-w-lg p-6 animate-fade-in mb-8">
+            <h2 className="text-lg font-bold text-stone-800 mb-4 font-display flex items-center gap-2">
+              <Package className="w-5 h-5 text-brand-600" /> Tạo gói đăng ký
+            </h2>
 
             {/* Customer */}
             <div className="mb-3">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Khách hàng *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Khách hàng *</label>
               <input type="text" placeholder="Tìm khách hàng..." value={customerSearch}
                 onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomerId(''); }}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
               {customerSearch && !selectedCustomerId && (
-                <div className="mt-1 border border-slate-200 rounded-xl max-h-32 overflow-y-auto bg-white shadow-lg">
+                <div className="mt-1 border border-stone-200 rounded-xl max-h-32 overflow-y-auto bg-white shadow-warm-lg">
                   {filteredCustomers.map(c => (
                     <button key={c.id} onClick={() => { setSelectedCustomerId(c.id); setCustomerSearch(c.name); }}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-brand-50 cursor-pointer border-0 bg-transparent">{c.name}</button>
@@ -192,21 +198,21 @@ export default function SubscriptionsPage() {
             </div>
 
             <div className="mb-3">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tên gói *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Tên gói *</label>
               <input type="text" value={packageName} onChange={(e) => setPackageName(e.target.value)} placeholder="VD: Gói tuần 4 bữa"
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tổng giá gói (VND)</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Tổng giá gói (VND)</label>
                 <input type="number" value={totalPrice} onChange={(e) => setTotalPrice(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Thanh toán</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Thanh toán</label>
                 <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
                   {PAYMENT_STATUSES.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
@@ -214,42 +220,42 @@ export default function SubscriptionsPage() {
 
             <div className="grid grid-cols-3 gap-3 mb-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Số lần giao</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Số lần giao</label>
                 <input type="number" min="1" value={deliveriesPlanned} onChange={(e) => setDeliveriesPlanned(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tần suất</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Tần suất</label>
                 <select value={frequency} onChange={(e) => setFrequency(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
                   <option value="weekly">Hàng tuần</option>
                   <option value="biweekly">2 tuần/lần</option>
                   <option value="monthly">Hàng tháng</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ngày bắt đầu</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Ngày bắt đầu</label>
                 <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40" />
               </div>
             </div>
 
             {/* Line items per delivery */}
             <div className="mb-3">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Món mỗi lần giao</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Món mỗi lần giao</label>
               <div className="flex gap-2">
                 <select value={selectedMenuItemId} onChange={(e) => setSelectedMenuItemId(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
+                  className="flex-1 px-3 py-2 border border-stone-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/40">
                   {menuItems.map(item => <option key={item.id} value={item.id}>{getMenuItemLabel(item)}</option>)}
                 </select>
                 <input type="number" min="1" value={addQty} onChange={(e) => setAddQty(parseInt(e.target.value) || 1)}
-                  className="w-14 px-2 py-2 border border-slate-200 rounded-xl text-sm text-center" />
+                  className="w-14 px-2 py-2 border border-stone-200 rounded-xl text-sm text-center" />
                 <button onClick={addDeliveryLineItem} className="px-3 py-2 bg-brand-500 text-white rounded-xl cursor-pointer border-0 text-sm">+</button>
               </div>
               {lineItemsPerDelivery.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {lineItemsPerDelivery.map((l, i) => (
-                    <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-1.5 text-sm">
+                    <div key={i} className="flex items-center justify-between bg-stone-50 rounded-lg px-3 py-1.5 text-sm">
                       <span>{getMenuItemLabel(l)} × {l.qty}</span>
                       <button onClick={() => setLineItemsPerDelivery(prev => prev.filter((_, j) => j !== i))}
                         className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-0">✕</button>
@@ -261,11 +267,11 @@ export default function SubscriptionsPage() {
 
             <div className="flex gap-2">
               <button onClick={handleCreate}
-                className="flex-1 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl cursor-pointer border-0 text-sm">
+                className="flex-1 py-2.5 bg-brand-500 hover:bg-brand-400 text-white font-medium rounded-xl cursor-pointer border-0 text-sm">
                 ✓ Tạo gói + lịch giao
               </button>
               <button onClick={() => setShowCreate(false)}
-                className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl cursor-pointer border-0 text-sm">Hủy</button>
+                className="px-4 py-2.5 bg-stone-100 text-stone-600 rounded-xl cursor-pointer border-0 text-sm">Hủy</button>
             </div>
           </div>
         </div>
@@ -277,8 +283,13 @@ export default function SubscriptionsPage() {
           <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
         </div>
       ) : subscriptions.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 shadow-sm">
-          <p className="text-slate-500">Chưa có gói đăng ký</p>
+        <div className="relative overflow-hidden text-center py-16 bg-white rounded-3xl border border-stone-100 shadow-warm">
+          <svg className="absolute w-[300px] h-[300px] opacity-5 text-accent-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,81.3,-46.3C90.8,-33.5,96.8,-18,95.5,-2.9C94.2,12.2,85.6,26.9,76.5,41.2C67.4,55.5,57.8,69.4,44.7,78.5C31.6,87.6,15.8,91.9,0.3,91.4C-15.2,90.9,-30.4,85.6,-43.3,76.3C-56.2,67,-66.8,53.7,-75.6,39.2C-84.4,24.7,-91.4,9,-90.4,-6.2C-89.4,-21.4,-80.4,-36.1,-70.3,-49C-60.2,-61.9,-49,-73,-35.6,-79.8C-22.2,-86.6,-6.6,-89.1,7.8,-87.3C22.2,-85.5,44.4,-79.4,44.7,-76.4Z" transform="translate(100 100)" />
+          </svg>
+          <div className="relative z-10">
+            <p className="text-stone-500 font-display">Chưa có gói đăng ký</p>
+          </div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -286,13 +297,13 @@ export default function SubscriptionsPage() {
             const remaining = deliveryCounts[sub.id] ?? 0;
             const isLow = remaining <= 1 && sub.status !== 'Completed';
             return (
-              <div key={sub.id} className={`bg-white rounded-xl border shadow-sm p-4 hover:shadow-md transition-smooth animate-fade-in
-                ${isLow ? 'border-amber-300 bg-amber-50' : 'border-slate-100'}`}>
+              <div key={sub.id} className={`bg-white rounded-xl border shadow-warm p-4 hover:shadow-md transition-smooth animate-fade-in
+                ${isLow ? 'border-amber-300 bg-amber-50' : 'border-stone-100'}`}>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
-                    <h3 className="font-semibold text-slate-800">{sub.packageName}</h3>
-                    <p className="text-sm text-slate-500">{sub.customerName || getCustomerName(sub.customerId)}</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-slate-500">
+                    <h3 className="font-semibold text-stone-800">{sub.packageName}</h3>
+                    <p className="text-sm text-stone-500">{sub.customerName || getCustomerName(sub.customerId)}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-stone-500">
                       <span>📅 {sub.startDate}</span>
                       <span>{sub.frequency === 'weekly' ? 'Hàng tuần' : sub.frequency === 'biweekly' ? '2 tuần/lần' : 'Hàng tháng'}</span>
                       {sub.totalPrice > 0 && <span className="font-medium text-brand-600">{formatVND(sub.totalPrice)}</span>}

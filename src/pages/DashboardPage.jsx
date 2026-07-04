@@ -3,6 +3,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { formatVND } from '../lib/pricing';
 import { PROTEIN_LABELS } from '../lib/menuData';
+import { Package, Truck, ChefHat, Wallet, TrendingUp, AlertTriangle, CalendarRange } from 'lucide-react';
 
 export default function DashboardPage() {
   const [deliveries, setDeliveries] = useState([]);
@@ -84,44 +85,44 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">📊 Tổng quan</h1>
-        <p className="text-sm text-slate-500 mt-1">Hôm nay: {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        <h1 className="text-2xl font-bold text-stone-800 font-display">Tổng quan</h1>
+        <p className="text-sm text-stone-500 mt-1">Hôm nay: {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
       </div>
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Gói hoạt động', value: activeSubs, icon: '📦', color: 'bg-brand-50 text-brand-700' },
-          { label: 'Giao hàng tuần này', value: deliveriesThisWeek, icon: '🚚', color: 'bg-blue-50 text-blue-700' },
-          { label: 'Phần ăn tuần này', value: portionsThisWeek, icon: '🍽️', color: 'bg-purple-50 text-purple-700' },
-          { label: 'Đơn chưa TT', value: unpaidCount, icon: '💰', color: unpaidCount > 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700' },
-          { label: 'Doanh thu tháng', value: formatVND(totalRevenue), icon: '📈', color: 'bg-amber-50 text-amber-700' },
-        ].map(kpi => (
-          <div key={kpi.label} className={`${kpi.color} rounded-2xl p-4 border border-current/10 animate-fade-in`}>
-            <div className="text-2xl mb-1">{kpi.icon}</div>
-            <div className="text-2xl font-bold">{kpi.value}</div>
+          { label: 'Gói hoạt động', value: activeSubs, icon: <Package className="w-6 h-6" />, color: 'bg-brand-50 text-brand-700' },
+          { label: 'Giao hàng tuần này', value: deliveriesThisWeek, icon: <Truck className="w-6 h-6" />, color: 'bg-accent-50 text-accent-700' },
+          { label: 'Phần ăn tuần này', value: portionsThisWeek, icon: <ChefHat className="w-6 h-6" />, color: 'bg-amber-50 text-amber-700' },
+          { label: 'Đơn chưa TT', value: unpaidCount, icon: <Wallet className="w-6 h-6" />, color: 'bg-brand-100 text-brand-800' },
+          { label: 'Doanh thu tháng', value: formatVND(totalRevenue), icon: <TrendingUp className="w-6 h-6" />, color: 'bg-accent-100 text-accent-800' },
+        ].map((kpi, idx) => (
+          <div key={idx} className={`${kpi.color} rounded-3xl p-4 border border-current/10 animate-fade-in`}>
+            <div className="mb-1">{kpi.icon}</div>
+            <div className="text-2xl font-bold font-display">{kpi.value}</div>
             <div className="text-xs opacity-75 mt-0.5">{kpi.label}</div>
           </div>
         ))}
       </div>
 
       {/* Today's deliveries */}
-      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <section className="bg-white rounded-3xl border border-stone-100 shadow-warm overflow-hidden">
         <div className="px-4 py-3 bg-brand-50 border-b border-brand-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-brand-800">🚚 Giao hàng hôm nay</h2>
+          <h2 className="text-sm font-semibold text-brand-800 font-display flex items-center gap-1.5"><Truck className="w-4 h-4"/> Giao hàng hôm nay</h2>
           <span className="text-xs text-brand-600 font-medium">{todayDeliveries.length} lần</span>
         </div>
         {todayDeliveries.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-slate-400 text-center">Không có giao hàng hôm nay</p>
+          <p className="px-4 py-6 text-sm text-stone-400 text-center">Không có giao hàng hôm nay</p>
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-stone-50">
             {todayDeliveries.map(d => (
               <div key={d.id} className="px-4 py-3 flex items-center justify-between">
                 <div>
-                  <span className="font-medium text-slate-800">{d.customerName}</span>
-                  <span className="text-slate-400 text-sm ml-2">{d.packageName}</span>
+                  <span className="font-medium text-stone-800">{d.customerName}</span>
+                  <span className="text-stone-400 text-sm ml-2">{d.packageName}</span>
                   {d.lineItems && (
-                    <div className="text-xs text-slate-400 mt-0.5">
+                    <div className="text-xs text-stone-400 mt-0.5">
                       {d.lineItems.map((l, i) => <span key={i}>{i > 0 && ', '}{PROTEIN_LABELS[l.protein] || l.protein} {l.flavor} ×{l.qty}</span>)}
                     </div>
                   )}
@@ -136,22 +137,22 @@ export default function DashboardPage() {
       </section>
 
       {/* Next 7 days */}
-      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-700">📅 7 ngày tới</h2>
+      <section className="bg-white rounded-3xl border border-stone-100 shadow-warm overflow-hidden">
+        <div className="px-4 py-3 bg-stone-50 border-b border-stone-100">
+          <h2 className="text-sm font-semibold text-stone-700 font-display flex items-center gap-1.5"><CalendarRange className="w-4 h-4"/> 7 ngày tới</h2>
         </div>
         {next7Deliveries.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-slate-400 text-center">Không có lịch giao</p>
+          <p className="px-4 py-6 text-sm text-stone-400 text-center">Không có lịch giao</p>
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-stone-50">
             {next7Deliveries.map(d => (
               <div key={d.id} className="px-4 py-2.5 flex items-center justify-between text-sm">
                 <div>
-                  <span className="text-slate-500">{d.scheduledDate}</span>
-                  <span className="font-medium text-slate-700 ml-2">{d.customerName}</span>
-                  <span className="text-slate-400 ml-1">({d.packageName})</span>
+                  <span className="text-stone-500">{d.scheduledDate}</span>
+                  <span className="font-medium text-stone-700 ml-2">{d.customerName}</span>
+                  <span className="text-stone-400 ml-1">({d.packageName})</span>
                 </div>
-                <span className="text-xs text-slate-400">{d.status}</span>
+                <span className="text-xs text-stone-400">{d.status}</span>
               </div>
             ))}
           </div>
@@ -160,9 +161,9 @@ export default function DashboardPage() {
 
       {/* Reorder alerts */}
       {reorderAlerts.length > 0 && (
-        <section className="bg-amber-50 rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+        <section className="bg-amber-50 rounded-3xl border border-amber-200 shadow-warm overflow-hidden">
           <div className="px-4 py-3 border-b border-amber-200">
-            <h2 className="text-sm font-semibold text-amber-800">⚠️ Cần gia hạn gói</h2>
+            <h2 className="text-sm font-semibold text-amber-800 font-display flex items-center gap-1.5"><AlertTriangle className="w-4 h-4"/> Cần gia hạn gói</h2>
           </div>
           <div className="divide-y divide-amber-100">
             {reorderAlerts.map(sub => (
@@ -182,19 +183,19 @@ export default function DashboardPage() {
 
       {/* Unpaid orders */}
       {unpaidOrders.length > 0 && (
-        <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 bg-red-50 border-b border-red-100">
-            <h2 className="text-sm font-semibold text-red-800">💰 Đơn chưa thanh toán</h2>
+        <section className="bg-white rounded-3xl border border-stone-100 shadow-warm overflow-hidden">
+          <div className="px-4 py-3 bg-accent-50 border-b border-accent-100">
+            <h2 className="text-sm font-semibold text-accent-800 font-display flex items-center gap-1.5"><Wallet className="w-4 h-4"/> Đơn chưa thanh toán</h2>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-stone-50">
             {unpaidOrders.map(order => (
               <div key={order.id} className="px-4 py-2.5 flex items-center justify-between text-sm">
                 <div>
-                  <span className="font-medium text-slate-700">{order.customerName}</span>
-                  <span className="text-slate-400 ml-2">{order.deliveryDate}</span>
+                  <span className="font-medium text-stone-700">{order.customerName}</span>
+                  <span className="text-stone-400 ml-2">{order.deliveryDate}</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-medium text-slate-700">{formatVND(order.total)}</span>
+                  <span className="font-medium text-stone-700">{formatVND(order.total)}</span>
                   <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${
                     order.paymentStatus === 'Đã cọc' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                   }`}>{order.paymentStatus}</span>

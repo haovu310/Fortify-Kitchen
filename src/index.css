@@ -2,21 +2,32 @@
 
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #1E9E5A;
-  --color-brand-600: #178a4d;
-  --color-brand-700: #117340;
-  --color-brand-800: #0d5c33;
-  --color-brand-900: #094526;
-  --color-brand-950: #052e19;
-  --color-surface: #f8fafc;
+  --font-display: 'Nunito', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --color-brand-50: #F6F9F6;
+  --color-brand-100: #E7EEE7;
+  --color-brand-200: #CCDBCC;
+  --color-brand-300: #A6BFA6;
+  --color-brand-400: #6A956A;
+  --color-brand-500: #283828;
+  --color-brand-600: #202D20;
+  --color-brand-700: #192419;
+  --color-brand-800: #131B13;
+  --color-brand-900: #0D120D;
+  --color-brand-950: #060906;
+  --color-surface: #FBF6ED;
   --color-surface-dark: #0f172a;
   --color-card: #ffffff;
   --color-card-dark: #1e293b;
+  --color-accent-50: #FDF0EA;
+  --color-accent-100: #FADCCC;
+  --color-accent-200: #F5B896;
+  --color-accent-300: #EF9060;
+  --color-accent-400: #E9713F;
+  --color-accent-500: #DD5A2B;
+  --color-accent-600: #C1552F;
+  --color-accent-700: #9B4325;
+  --color-accent-800: #78331D;
+  --color-accent-900: #582615;
 }
 
 /* Base styles */
@@ -74,4 +85,18 @@ body {
 /* Transitions */
 .transition-smooth {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Typography */
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+/* Shadows */
+.shadow-warm {
+  box-shadow: 0 2px 8px -2px rgba(120, 72, 32, 0.08), 0 1px 2px rgba(120, 72, 32, 0.06);
+}
+.shadow-warm-lg {
+  box-shadow: 0 12px 32px -8px rgba(120, 72, 32, 0.18), 0 4px 8px rgba(120, 72, 32, 0.08);
 }

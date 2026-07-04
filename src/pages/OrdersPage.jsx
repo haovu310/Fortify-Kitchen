@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { calculateOrderTotal, formatVND } from '../lib/pricing';
 import { PROTEIN_LABELS, PAYMENT_STATUSES, getMenuItemLabel } from '../lib/menuData';
 import { useToast } from '../components/Toast';
+import { ClipboardList } from 'lucide-react';
 
 export default function OrdersPage() {
   const toast = useToast();
@@ -135,12 +136,15 @@ export default function OrdersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">📋 Đơn hàng</h1>
-          <p className="text-sm text-slate-500 mt-1">{orders.length} đơn hàng</p>
+          <h1 className="text-2xl font-bold text-stone-800 font-display flex items-center gap-2">
+            <ClipboardList className="w-6 h-6 text-brand-600" />
+            Đơn hàng
+          </h1>
+          <p className="text-sm text-stone-500 mt-1">{orders.length} đơn hàng</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl transition-smooth cursor-pointer border-0"
+          className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition-smooth cursor-pointer border-0"
         >
           + Tạo đơn hàng
         </button>
@@ -149,12 +153,12 @@ export default function OrdersPage() {
       {/* Filter */}
       <div className="flex gap-2 flex-wrap">
         <button onClick={() => setFilterStatus('all')}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer border-0 transition-smooth ${filterStatus === 'all' ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer border-0 transition-smooth ${filterStatus === 'all' ? 'bg-brand-500 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
           Tất cả
         </button>
         {PAYMENT_STATUSES.map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer border-0 transition-smooth ${filterStatus === s ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer border-0 transition-smooth ${filterStatus === s ? 'bg-brand-500 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
             {s}
           </button>
         ))}
@@ -163,29 +167,31 @@ export default function OrdersPage() {
       {/* Create order modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto animate-fade-in" onClick={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 animate-fade-in mb-8">
-            <h2 className="text-lg font-bold text-slate-800 mb-4">🛒 Tạo đơn hàng mới</h2>
+          <div className="bg-white rounded-3xl shadow-warm-lg w-full max-w-lg p-6 animate-fade-in mb-8">
+            <h2 className="text-lg font-bold text-stone-800 mb-4 font-display flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-brand-600" /> Tạo đơn hàng mới
+            </h2>
 
             {/* Customer picker */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Khách hàng *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Khách hàng *</label>
               <input
                 type="text"
                 placeholder="Tìm khách hàng..."
                 value={customerSearch}
                 onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomerId(''); }}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
+                className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500"
               />
               {customerSearch && !selectedCustomerId && (
-                <div className="mt-1 border border-slate-200 rounded-xl max-h-32 overflow-y-auto bg-white shadow-lg">
+                <div className="mt-1 border border-stone-200 rounded-xl max-h-32 overflow-y-auto bg-white shadow-warm-lg">
                   {filteredCustomers.map(c => (
                     <button key={c.id} onClick={() => { setSelectedCustomerId(c.id); setCustomerSearch(c.name); }}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-brand-50 cursor-pointer border-0 bg-transparent transition-smooth">
                       <span className="font-medium">{c.name}</span>
-                      {c.phone && <span className="text-slate-400 ml-2">{c.phone}</span>}
+                      {c.phone && <span className="text-stone-400 ml-2">{c.phone}</span>}
                     </button>
                   ))}
-                  {filteredCustomers.length === 0 && <p className="px-3 py-2 text-sm text-slate-400">Không tìm thấy</p>}
+                  {filteredCustomers.length === 0 && <p className="px-3 py-2 text-sm text-stone-400">Không tìm thấy</p>}
                 </div>
               )}
               {selectedCustomerId && (
@@ -196,14 +202,14 @@ export default function OrdersPage() {
             {/* Date + payment */}
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ngày giao</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Ngày giao</label>
                 <input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Thanh toán</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Thanh toán</label>
                 <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 bg-white">
+                  className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 bg-white">
                   {PAYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
@@ -211,17 +217,17 @@ export default function OrdersPage() {
 
             {/* Add items */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Thêm món</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Thêm món</label>
               <div className="flex gap-2">
                 <select value={selectedMenuItemId} onChange={(e) => setSelectedMenuItemId(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 bg-white">
+                  className="flex-1 px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 bg-white">
                   {menuItems.map(item => (
                     <option key={item.id} value={item.id}>{getMenuItemLabel(item)} — {formatVND(item.price)}</option>
                   ))}
                 </select>
                 <input type="number" min="1" value={addQty} onChange={(e) => setAddQty(parseInt(e.target.value) || 1)}
-                  className="w-16 px-2 py-2 border border-slate-200 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
-                <button onClick={addLineItem} className="px-3 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm rounded-xl cursor-pointer border-0 transition-smooth">+</button>
+                  className="w-16 px-2 py-2 border border-stone-200 rounded-xl text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500" />
+                <button onClick={addLineItem} className="px-3 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm rounded-xl cursor-pointer border-0 transition-smooth">+</button>
               </div>
             </div>
 
@@ -229,13 +235,13 @@ export default function OrdersPage() {
             {lineItems.length > 0 && (
               <div className="mb-4 space-y-1">
                 {lineItems.map((l, i) => (
-                  <div key={i} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm">
+                  <div key={i} className="flex items-center justify-between bg-stone-50 rounded-lg px-3 py-2 text-sm">
                     <span className="flex-1">{PROTEIN_LABELS[l.protein]} {l.flavor} ({l.sizeGrams}g)</span>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => updateLineQty(i, l.qty - 1)} className="w-6 h-6 rounded bg-slate-200 hover:bg-slate-300 border-0 cursor-pointer text-xs">−</button>
+                      <button onClick={() => updateLineQty(i, l.qty - 1)} className="w-6 h-6 rounded bg-stone-200 hover:bg-stone-300 border-0 cursor-pointer text-xs">−</button>
                       <span className="w-6 text-center font-medium">{l.qty}</span>
-                      <button onClick={() => updateLineQty(i, l.qty + 1)} className="w-6 h-6 rounded bg-slate-200 hover:bg-slate-300 border-0 cursor-pointer text-xs">+</button>
-                      <span className="w-24 text-right text-slate-600">{formatVND(l.unitPrice * l.qty)}</span>
+                      <button onClick={() => updateLineQty(i, l.qty + 1)} className="w-6 h-6 rounded bg-stone-200 hover:bg-stone-300 border-0 cursor-pointer text-xs">+</button>
+                      <span className="w-24 text-right text-stone-600">{formatVND(l.unitPrice * l.qty)}</span>
                       <button onClick={() => removeLineItem(i)} className="text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-0">✕</button>
                     </div>
                   </div>
@@ -246,7 +252,7 @@ export default function OrdersPage() {
             {/* Pricing summary */}
             {pricingResult && (
               <div className="bg-brand-50 border border-brand-200 rounded-xl p-3 mb-4 text-sm space-y-1">
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-stone-600">
                   <span>Tạm tính:</span>
                   <span>{formatVND(pricingResult.lineSubtotal)}</span>
                 </div>
@@ -268,11 +274,11 @@ export default function OrdersPage() {
 
             <div className="flex gap-2">
               <button onClick={handleCreateOrder}
-                className="flex-1 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl transition-smooth cursor-pointer border-0 text-sm">
+                className="flex-1 py-2.5 bg-brand-500 hover:bg-brand-400 text-white font-medium rounded-xl transition-smooth cursor-pointer border-0 text-sm">
                 ✓ Tạo đơn hàng
               </button>
               <button onClick={() => setShowCreate(false)}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium rounded-xl transition-smooth cursor-pointer border-0 text-sm">
+                className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium rounded-xl transition-smooth cursor-pointer border-0 text-sm">
                 Hủy
               </button>
             </div>
@@ -286,21 +292,26 @@ export default function OrdersPage() {
           <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 shadow-sm">
-          <p className="text-slate-500">Chưa có đơn hàng</p>
+        <div className="relative overflow-hidden text-center py-16 bg-white rounded-3xl border border-stone-100 shadow-warm">
+          <svg className="absolute w-[300px] h-[300px] opacity-5 text-accent-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,81.3,-46.3C90.8,-33.5,96.8,-18,95.5,-2.9C94.2,12.2,85.6,26.9,76.5,41.2C67.4,55.5,57.8,69.4,44.7,78.5C31.6,87.6,15.8,91.9,0.3,91.4C-15.2,90.9,-30.4,85.6,-43.3,76.3C-56.2,67,-66.8,53.7,-75.6,39.2C-84.4,24.7,-91.4,9,-90.4,-6.2C-89.4,-21.4,-80.4,-36.1,-70.3,-49C-60.2,-61.9,-49,-73,-35.6,-79.8C-22.2,-86.6,-6.6,-89.1,7.8,-87.3C22.2,-85.5,44.4,-79.4,44.7,-76.4Z" transform="translate(100 100)" />
+          </svg>
+          <div className="relative z-10">
+            <p className="text-stone-500 font-display">Chưa có đơn hàng</p>
+          </div>
         </div>
       ) : (
         <div className="space-y-2">
           {filteredOrders.map(order => (
-            <div key={order.id} className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 hover:shadow-md transition-smooth animate-fade-in">
+            <div key={order.id} className="bg-white rounded-xl border border-stone-100 shadow-warm p-4 hover:shadow-md transition-smooth animate-fade-in">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
-                  <h3 className="font-semibold text-slate-800">{order.customerName || getCustomerName(order.customerId)}</h3>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-slate-500">
+                  <h3 className="font-semibold text-stone-800">{order.customerName || getCustomerName(order.customerId)}</h3>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-stone-500">
                     <span>📅 {order.deliveryDate}</span>
                     <span className="font-medium text-brand-600">{formatVND(order.total)}</span>
                     {order.lineItems && (
-                      <span className="text-slate-400">{order.lineItems.reduce((s, l) => s + l.qty, 0)} phần</span>
+                      <span className="text-stone-400">{order.lineItems.reduce((s, l) => s + l.qty, 0)} phần</span>
                     )}
                   </div>
                 </div>

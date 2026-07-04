@@ -53,17 +53,17 @@ export function ToastProvider({ children }) {
             <div
               key={t.id}
               role="status"
-              className="pointer-events-auto bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in flex items-stretch"
+              className="pointer-events-auto bg-white rounded-xl shadow-warm-lg border border-stone-100 overflow-hidden animate-fade-in flex items-stretch"
             >
               <div className={`w-1.5 ${style.bar}`} />
               <div className="flex items-center gap-3 px-3 py-3 flex-1 min-w-0">
                 <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${style.iconWrap}`}>
                   {style.icon}
                 </span>
-                <p className="text-sm text-slate-700 flex-1 min-w-0 break-words">{t.message}</p>
+                <p className="text-sm text-stone-700 flex-1 min-w-0 break-words">{t.message}</p>
                 <button
                   onClick={() => dismiss(t.id)}
-                  className="text-slate-300 hover:text-slate-500 cursor-pointer bg-transparent border-0 text-sm shrink-0"
+                  className="text-stone-300 hover:text-stone-500 cursor-pointer bg-transparent border-0 text-sm shrink-0"
                   aria-label="Đóng thông báo"
                 >
                   ✕

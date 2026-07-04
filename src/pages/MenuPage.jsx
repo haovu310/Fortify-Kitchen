@@ -5,6 +5,7 @@ import { DEFAULT_MENU_ITEMS, PROTEIN_LABELS } from '../lib/menuData';
 import { formatVND } from '../lib/pricing';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmDialog';
+import { UtensilsCrossed } from 'lucide-react';
 
 export default function MenuPage() {
   const toast = useToast();
@@ -98,13 +99,16 @@ export default function MenuPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">🍽️ Thực đơn</h1>
-          <p className="text-sm text-slate-500 mt-1">Quản lý giá và món ăn</p>
+          <h1 className="text-2xl font-bold text-stone-800 font-display flex items-center gap-2">
+            <UtensilsCrossed className="w-6 h-6 text-brand-600" />
+            Thực đơn
+          </h1>
+          <p className="text-sm text-stone-500 mt-1">Quản lý giá và món ăn</p>
         </div>
         <button
           onClick={handleSeed}
           disabled={seeding}
-          className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl transition-smooth cursor-pointer border-0 disabled:opacity-50"
+          className="px-4 py-2 bg-brand-500 hover:bg-brand-400 text-white text-sm font-medium rounded-xl transition-smooth cursor-pointer border-0 disabled:opacity-50"
         >
           {seeding ? 'Đang tạo...' : '🌱 Tạo dữ liệu mẫu'}
         </button>
@@ -115,15 +119,20 @@ export default function MenuPage() {
           <div className="w-8 h-8 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" />
         </div>
       ) : items.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 shadow-sm">
-          <p className="text-slate-500 text-lg mb-2">Chưa có món nào</p>
-          <p className="text-slate-400 text-sm">Nhấn "Tạo dữ liệu mẫu" để bắt đầu</p>
+        <div className="relative overflow-hidden text-center py-16 bg-white rounded-3xl border border-stone-100 shadow-warm">
+          <svg className="absolute w-[300px] h-[300px] opacity-5 text-accent-400 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,81.3,-46.3C90.8,-33.5,96.8,-18,95.5,-2.9C94.2,12.2,85.6,26.9,76.5,41.2C67.4,55.5,57.8,69.4,44.7,78.5C31.6,87.6,15.8,91.9,0.3,91.4C-15.2,90.9,-30.4,85.6,-43.3,76.3C-56.2,67,-66.8,53.7,-75.6,39.2C-84.4,24.7,-91.4,9,-90.4,-6.2C-89.4,-21.4,-80.4,-36.1,-70.3,-49C-60.2,-61.9,-49,-73,-35.6,-79.8C-22.2,-86.6,-6.6,-89.1,7.8,-87.3C22.2,-85.5,44.4,-79.4,44.7,-76.4Z" transform="translate(100 100)" />
+          </svg>
+          <div className="relative z-10">
+            <p className="text-stone-500 text-lg mb-2 font-display">Chưa có món nào — hãy tạo dữ liệu mẫu nhé!</p>
+            <p className="text-stone-400 text-sm">Nhấn "Tạo dữ liệu mẫu" để bắt đầu</p>
+          </div>
         </div>
       ) : (
         Object.entries(grouped).map(([protein, proteinItems]) => (
-          <div key={protein} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-fade-in">
+          <div key={protein} className="bg-white rounded-3xl border border-stone-100 shadow-warm overflow-hidden animate-fade-in">
             <div className="px-4 py-3 bg-brand-50 border-b border-brand-100">
-              <h2 className="text-lg font-semibold text-brand-800">
+              <h2 className="text-lg font-semibold text-brand-800 font-display">
                 {PROTEIN_LABELS[protein] || protein}
                 <span className="text-sm font-normal text-brand-600 ml-2">({proteinItems.length} món)</span>
               </h2>
@@ -131,18 +140,18 @@ export default function MenuPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 text-left">
-                    <th className="px-4 py-2.5 font-medium text-slate-500">Hương vị</th>
-                    <th className="px-4 py-2.5 font-medium text-slate-500 text-center">Khối lượng</th>
-                    <th className="px-4 py-2.5 font-medium text-slate-500 text-right">Giá</th>
-                    <th className="px-4 py-2.5 font-medium text-slate-500 text-center">Trạng thái</th>
+                  <tr className="border-b border-stone-100 text-left">
+                    <th className="px-4 py-2.5 font-medium text-stone-500">Hương vị</th>
+                    <th className="px-4 py-2.5 font-medium text-stone-500 text-center">Khối lượng</th>
+                    <th className="px-4 py-2.5 font-medium text-stone-500 text-right">Giá</th>
+                    <th className="px-4 py-2.5 font-medium text-stone-500 text-center">Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody>
                   {proteinItems.map(item => (
-                    <tr key={item.id} className={`border-b border-slate-50 hover:bg-slate-50 transition-smooth ${!item.active ? 'opacity-50' : ''}`}>
-                      <td className="px-4 py-2.5 font-medium text-slate-700 capitalize">{item.flavor}</td>
-                      <td className="px-4 py-2.5 text-center text-slate-600">{item.sizeGrams}g</td>
+                    <tr key={item.id} className={`border-b border-stone-50 hover:bg-stone-50 transition-smooth ${!item.active ? 'opacity-50' : ''}`}>
+                      <td className="px-4 py-2.5 font-medium text-stone-700 capitalize">{item.flavor}</td>
+                      <td className="px-4 py-2.5 text-center text-stone-600">{item.sizeGrams}g</td>
                       <td className="px-4 py-2.5 text-right">
                         {editingId === item.id ? (
                           <div className="flex items-center justify-end gap-1">
@@ -158,12 +167,12 @@ export default function MenuPage() {
                               autoFocus
                             />
                             <button onClick={() => savePrice(item.id)} className="text-brand-500 hover:text-brand-700 cursor-pointer bg-transparent border-0 text-sm">✓</button>
-                            <button onClick={() => setEditingId(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer bg-transparent border-0 text-sm">✕</button>
+                            <button onClick={() => setEditingId(null)} className="text-stone-400 hover:text-stone-600 cursor-pointer bg-transparent border-0 text-sm">✕</button>
                           </div>
                         ) : (
                           <button
                             onClick={() => startEdit(item)}
-                            className="text-slate-700 hover:text-brand-600 cursor-pointer bg-transparent border-0 font-medium transition-smooth text-sm"
+                            className="text-stone-700 hover:text-brand-600 cursor-pointer bg-transparent border-0 font-medium transition-smooth text-sm"
                             title="Nhấn để sửa giá"
                           >
                             {formatVND(item.price)}
@@ -176,7 +185,7 @@ export default function MenuPage() {
                           className={`px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer border-0 transition-smooth
                             ${item.active
                               ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                              : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
                             }`}
                         >
                           {item.active ? 'Đang bán' : 'Tạm ngưng'}
